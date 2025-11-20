@@ -329,6 +329,7 @@ protected:
 #endif
 
             details::log_msg log_msg(loc, name_, lvl, string_view_t(buf.data(), buf.size()));
+            log_msg.capture_context(); // Capture current thread context
             log_it_(log_msg, log_enabled, traceback_enabled);
         }
         SPDLOG_LOGGER_CATCH(loc)
@@ -351,6 +352,7 @@ protected:
             memory_buf_t buf;
             details::os::wstr_to_utf8buf(wstring_view_t(wbuf.data(), wbuf.size()), buf);
             details::log_msg log_msg(loc, name_, lvl, string_view_t(buf.data(), buf.size()));
+            log_msg.capture_context(); // Capture current thread context
             log_it_(log_msg, log_enabled, traceback_enabled);
         }
         SPDLOG_LOGGER_CATCH(loc)

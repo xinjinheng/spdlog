@@ -10,6 +10,7 @@
 #include <spdlog/details/fmt_helper.h>
 #include <spdlog/details/log_msg.h>
 #include <spdlog/details/os.h>
+#include <spdlog/details/context_formatter.h>
 
 #ifndef SPDLOG_NO_TLS
     #include <spdlog/mdc.h>
@@ -1231,6 +1232,19 @@ SPDLOG_INLINE void pattern_formatter::handle_flag_(char flag, details::padding_i
             break;
 #endif
 
+        // Context variables formatter (for backward compatibility)
+        case ('C'):
+        {
+            auto key_start = ++it;
+            auto key_end = std::find(it, end, ')');
+            if (key_end != end) {
+                std::string key(key_start, key_end);
+                formatters_.push_back(details::make_unique<details::context_formatter<Padder>>(key, padding));
+                it = key_end;
+            }
+            break;
+        }
+
         default:  // Unknown flag appears as is
             auto unknown_flag = details::make_unique<details::aggregate_formatter>();
 
@@ -1316,10 +1330,31 @@ SPDLOG_INLINE void pattern_formatter::compile_pattern_(const std::string &patter
             auto padding = handle_padspec_(++it, end);
 
             if (it != end) {
-                if (padding.enabled()) {
-                    handle_flag_<details::scoped_padder>(*it, padding);
+                // Check if it's a context variable pattern: %{key}
+                if (*it == '{') {
+                    auto key_start = ++it;
+                    auto key_end = std::find(it, end, '}');
+                    if (key_end != end) {
+                        std::string key(key_start, key_end);
+                        if (padding.enabled()) {
+                            formatters_.push_back(details::make_unique<details::context_formatter<details::scoped_padder>>(key, padding));
+                        } else {
+                            formatters_.push_back(details::make_unique<details::context_formatter<details::null_scoped_padder>>(key, padding));
+                        }
+                        it = key_end; // Advance to after '}'
+                    } else {
+                        // Invalid pattern, treat as literal
+                        auto unknown_flag = details::make_unique<details::aggregate_formatter>();
+                        unknown_flag->add_ch('%');
+                        unknown_flag->add_ch('{');
+                        formatters_.push_back(std::move(unknown_flag));
+                    }
                 } else {
-                    handle_flag_<details::null_scoped_padder>(*it, padding);
+                    if (padding.enabled()) {
+                        handle_flag_<details::scoped_padder>(*it, padding);
+                    } else {
+                        handle_flag_<details::null_scoped_padder>(*it, padding);
+                    }
                 }
             } else {
                 break;

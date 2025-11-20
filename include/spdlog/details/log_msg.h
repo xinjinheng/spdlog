@@ -4,6 +4,7 @@
 #pragma once
 
 #include <spdlog/common.h>
+#include <spdlog/context.h>
 #include <string>
 
 namespace spdlog {
@@ -31,6 +32,15 @@ struct SPDLOG_API log_msg {
 
     source_loc source;
     string_view_t payload;
+
+    // Context data (trace_id, span_id, etc.)
+    std::unique_ptr<context_impl> context;
+
+    // Capture current thread context into this log_msg
+    void capture_context()
+    {
+        context = spdlog::context::capture();
+    }
 };
 }  // namespace details
 }  // namespace spdlog
