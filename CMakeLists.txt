@@ -135,6 +135,7 @@ option(
     "prevent spdlog from using of std::atomic log levels (use only if your code never modifies log levels concurrently"
     OFF)
 option(SPDLOG_DISABLE_DEFAULT_LOGGER "Disable default logger creation" OFF)
+option(SPDLOG_NO_CONTEXT "Disable log context support" OFF)
 option(SPDLOG_FWRITE_UNLOCKED "Use the unlocked variant of fwrite. Leave this on unless your libc doesn't have it" ON)
 
 # clang-tidy
@@ -155,7 +156,7 @@ message(STATUS "Build type: " ${CMAKE_BUILD_TYPE})
 # ---------------------------------------------------------------------------------------
 # Static/Shared library
 # ---------------------------------------------------------------------------------------
-set(SPDLOG_SRCS src/spdlog.cpp src/stdout_sinks.cpp src/color_sinks.cpp src/file_sinks.cpp src/async.cpp src/cfg.cpp)
+set(SPDLOG_SRCS src/spdlog.cpp src/stdout_sinks.cpp src/color_sinks.cpp src/file_sinks.cpp src/async.cpp src/cfg.cpp src/context.cpp)
 
 if(NOT SPDLOG_USE_STD_FORMAT AND NOT SPDLOG_FMT_EXTERNAL AND NOT SPDLOG_FMT_EXTERNAL_HO)
     list(APPEND SPDLOG_SRCS src/bundled_fmtlib_format.cpp)
@@ -186,7 +187,7 @@ if(SPDLOG_SYSTEM_INCLUDES)
     set(SPDLOG_INCLUDES_LEVEL "SYSTEM")
 endif()
 
-target_compile_definitions(spdlog PUBLIC SPDLOG_COMPILED_LIB)
+target_compile_definitions(spdlog PUBLIC SPDLOG_COMPILED_LIB $<$<BOOL:${SPDLOG_NO_CONTEXT}>:SPDLOG_NO_CONTEXT>)
 target_include_directories(spdlog ${SPDLOG_INCLUDES_LEVEL} PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>"
                                                                   "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>")
 target_link_libraries(spdlog PUBLIC Threads::Threads)
@@ -218,6 +219,7 @@ target_include_directories(
     spdlog_header_only ${SPDLOG_INCLUDES_LEVEL} INTERFACE "$<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>"
                                                           "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>")
 target_link_libraries(spdlog_header_only INTERFACE Threads::Threads)
+target_compile_definitions(spdlog_header_only INTERFACE $<$<BOOL:${SPDLOG_NO_CONTEXT}>:SPDLOG_NO_CONTEXT>)
 
 # ---------------------------------------------------------------------------------------
 # Use fmt package if using external fmt

@@ -10,6 +10,7 @@
 #pragma once
 
 #include <spdlog/common.h>
+#include <spdlog/context.h>
 #include <spdlog/details/registry.h>
 #include <spdlog/details/synchronous_factory.h>
 #include <spdlog/logger.h>
