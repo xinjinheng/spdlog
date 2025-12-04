@@ -68,13 +68,29 @@ public:
 
     // Send exactly n_bytes of the given data.
     // On error close the connection and throw.
-    void send(const char *data, size_t n_bytes) {
+    void send(const char *data, size_t n_bytes, std::chrono::milliseconds timeout = std::chrono::milliseconds(500)) {
+        // Set send timeout
+        struct timeval tv;
+        tv.tv_sec = static_cast<long>(timeout.count() / 1000);
+        tv.tv_usec = static_cast<long>((timeout.count() % 1000) * 1000);
+        if (::setsockopt(socket_, SOL_SOCKET, SO_SNDTIMEO, reinterpret_cast<const char *>(&tv), sizeof(tv)) < 0) {
+            throw_spdlog_ex("error: setsockopt(SO_SNDTIMEO) Failed!");
+        }
+
         ssize_t toslen = 0;
         socklen_t tolen = sizeof(struct sockaddr);
-        if ((toslen = ::sendto(socket_, data, n_bytes, 0, (struct sockaddr *)&sockAddr_, tolen)) ==
-            -1) {
-            throw_spdlog_ex("sendto(2) failed", errno);
+        if ((toslen = ::sendto(socket_, data, n_bytes, 0, (struct sockaddr *)&sockAddr_, tolen)) == -1) {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                throw_spdlog_ex("sendto(2) timed out");
+            } else {
+                throw_spdlog_ex("sendto(2) failed", errno);
+            }
         }
+    }
+
+    // Overload for backward compatibility
+    void send(const char *data, size_t n_bytes) {
+        send(data, n_bytes, std::chrono::milliseconds(500));
     }
 };
 }  // namespace details
