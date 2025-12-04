@@ -15,9 +15,18 @@ add_executable(example example.cpp)
 target_link_libraries(example PRIVATE spdlog::spdlog $<$<BOOL:${MINGW}>:ws2_32>)
 
 # ---------------------------------------------------------------------------------------
+# Example of reliable UDP sink
+# ---------------------------------------------------------------------------------------
+add_executable(reliable_udp_example reliable_udp_example.cpp)
+target_link_libraries(reliable_udp_example PRIVATE spdlog::spdlog $<$<BOOL:${MINGW}>:ws2_32>)
+
+# ---------------------------------------------------------------------------------------
 # Example of using header-only library
 # ---------------------------------------------------------------------------------------
 if(SPDLOG_BUILD_EXAMPLE_HO)
     add_executable(example_header_only example.cpp)
     target_link_libraries(example_header_only PRIVATE spdlog::spdlog_header_only)
+    
+    add_executable(reliable_udp_example_header_only reliable_udp_example.cpp)
+    target_link_libraries(reliable_udp_example_header_only PRIVATE spdlog::spdlog_header_only)
 endif()
