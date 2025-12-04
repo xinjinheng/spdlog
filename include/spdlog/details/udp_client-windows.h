@@ -86,12 +86,28 @@ public:
 
     SOCKET fd() const { return socket_; }
 
-    void send(const char *data, size_t n_bytes) {
-        socklen_t tolen = sizeof(struct sockaddr);
-        if (::sendto(socket_, data, static_cast<int>(n_bytes), 0, (struct sockaddr *)&addr_,
-                     tolen) == -1) {
-            throw_spdlog_ex("sendto(2) failed", errno);
+    void send(const char *data, size_t n_bytes, std::chrono::milliseconds timeout = std::chrono::milliseconds(500)) {
+        // Set send timeout
+        DWORD timeout_ms = static_cast<DWORD>(timeout.count());
+        if (::setsockopt(socket_, SOL_SOCKET, SO_SNDTIMEO, reinterpret_cast<const char *>(&timeout_ms), sizeof(timeout_ms)) < 0) {
+            int last_error = ::WSAGetLastError();
+            throw_winsock_error_("error: setsockopt(SO_SNDTIMEO) Failed!", last_error);
         }
+
+        socklen_t tolen = sizeof(struct sockaddr);
+        if (::sendto(socket_, data, static_cast<int>(n_bytes), 0, (struct sockaddr *)&addr_, tolen) == -1) {
+            int last_error = ::WSAGetLastError();
+            if (last_error == WSAETIMEDOUT) {
+                throw_spdlog_ex("sendto(2) timed out");
+            } else {
+                throw_winsock_error_("sendto(2) failed", last_error);
+            }
+        }
+    }
+
+    // Overload for backward compatibility
+    void send(const char *data, size_t n_bytes) {
+        send(data, n_bytes, std::chrono::milliseconds(500));
     }
 };
 }  // namespace details
